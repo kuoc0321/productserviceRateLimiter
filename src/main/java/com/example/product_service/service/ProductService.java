@@ -2,6 +2,8 @@ package com.example.product_service.service;
 
 import com.example.product_service.dto.ProductRequest;
 import com.example.product_service.model.Product;
+import com.example.product_service.ratelimiter.FixedWindowRateLimiter;
+import com.example.product_service.ratelimiter.TokenBucketRateLimiter;
 import com.example.product_service.repository.ProductRepository;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -20,14 +22,14 @@ import java.time.Duration;
 @Slf4j
 public class ProductService {
     private final ProductRepository productRepository;
-
-    private final Bucket createProductBucket = Bucket4j.builder()
-            .addLimit(Bandwidth.classic(1, Refill.intervally(1, Duration.ofMinutes(10))))
-            .build();
+    private FixedWindowRateLimiter rateLimiter = new FixedWindowRateLimiter(1, Duration.ofMinutes(10).toMillis());
+//    private final Bucket createProductBucket = Bucket4j.builder()
+//            .addLimit(Bandwidth.classic(1, Refill.intervally(1, Duration.ofMinutes(10))))
+//            .build();
 
     public void createProduct(ProductRequest productRequest)
     {
-        if(createProductBucket.tryConsume(1)){
+        if(rateLimiter.tryConsume()){
             Product product = Product.builder()
                     .name(productRequest.getName())
                     .description(productRequest.getDescription())
